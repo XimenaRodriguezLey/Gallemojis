@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Activar cuenta | Gallemojis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-primary: oklch(42.563% 0.07264 164.331);
+            --accent: oklch(43.2% 0.095 166.913);
+            --accent-contrast: oklch(92.637% 0.04285 117.333);
+        }
+        body {
+            background: radial-gradient(circle at top right, rgba(113, 183, 110, 0.85), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(110, 208, 153, 0.85), transparent 25%),
+                        var(--bg-primary);
+        }
+        .login-panel {
+            background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(209,225,209,0.78));
+            border: 1px solid rgba(255,255,255,0.65);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.12);
+            backdrop-filter: blur(18px);
+        }
+        .btn-accent {
+            background-color: var(--accent);
+            color: var(--accent-contrast);
+            transition: background-color 0.2s;
+        }
+        .btn-accent:hover {
+            background-color: color-mix(in srgb, var(--accent) 80%, black 23%);
+        }
+        .btn-accent:disabled { opacity: 0.6; cursor: not-allowed; }
+        .input-field {
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(0,0,0,0.08);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(60, 140, 80, 0.15);
+        }
+        .msg {
+            display: none;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 0.875rem;
+            margin-bottom: 14px;
+        }
+        .msg.error { display:block; background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#dc2626; }
+        .msg.ok    { display:block; background: rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#047857; }
+    </style>
+</head>
+<body class="min-h-screen px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
+    <div class="w-full max-w-md">
+        <section class="login-panel rounded-3xl p-8 sm:p-10">
+            <div class="mb-8 text-center">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Activar cuenta</p>
+                <h1 class="mt-4 text-3xl font-semibold uppercase tracking-[0.35em]">Gallemojis</h1>
+                <p class="mt-2 text-sm text-slate-600">Establece tu contraseña para entrar como padre/madre.</p>
+            </div>
+
+            <div id="errorMsg" class="msg error"></div>
+            <div id="okMsg"    class="msg ok"></div>
+
+            <form class="space-y-6" id="formActivar">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Código de activación</label>
+                    <input id="inpToken" type="text" required
+                        class="input-field mt-2 block w-full rounded-2xl px-4 py-3 text-sm shadow-sm font-mono" />
+                    <p class="text-xs text-slate-500 mt-1">
+                        La maestra te dio un enlace o un código. Si abriste el enlace, este campo ya viene lleno.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Nueva contraseña</label>
+                    <input id="inpPassword" type="password" minlength="6" required
+                        class="input-field mt-2 block w-full rounded-2xl px-4 py-3 text-sm shadow-sm" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Confirma tu contraseña</label>
+                    <input id="inpConfirm" type="password" minlength="6" required
+                        class="input-field mt-2 block w-full rounded-2xl px-4 py-3 text-sm shadow-sm" />
+                </div>
+
+                <button type="submit" id="btnSubmit"
+                    class="btn-accent mt-4 w-full rounded-2xl px-4 py-3 text-sm font-semibold shadow-lg shadow-slate-300/40">
+                    Activar y entrar
+                </button>
+            </form>
+
+            <p class="mt-6 text-center text-xs text-slate-500">
+                ¿Ya tienes contraseña? <a href="index.html" class="font-medium underline">Inicia sesión</a>.
+            </p>
+        </section>
+    </div>
+
+    <script src="js/gallemojis-api.js"></script>
+    <script>
+        const $ = (s) => document.querySelector(s);
+        const errMsg = $('#errorMsg');
+        const okMsg  = $('#okMsg');
+
+        // El token puede venir por query string: activar.html?token=XXXX
+        const params = new URLSearchParams(window.location.search);
+        const tokenQuery = params.get('token');
+        if (tokenQuery) $('#inpToken').value = tokenQuery;
+
+        function mostrarError(m) { errMsg.textContent = m; errMsg.style.display = 'block'; okMsg.style.display = 'none'; }
+        function mostrarOk(m)    { okMsg.textContent = m;  okMsg.style.display  = 'block'; errMsg.style.display = 'none'; }
+
+        $('#formActivar').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errMsg.style.display = 'none';
+            okMsg.style.display  = 'none';
+
+            const token   = $('#inpToken').value.trim();
+            const pass    = $('#inpPassword').value;
+            const confirm = $('#inpConfirm').value;
+
+            if (pass !== confirm) {
+                mostrarError('Las contraseñas no coinciden.');
+                return;
+            }
+            if (pass.length < 6) {
+                mostrarError('La contraseña debe tener al menos 6 caracteres.');
+                return;
+            }
+
+            $('#btnSubmit').disabled = true;
+            $('#btnSubmit').textContent = 'Activando…';
+
+            try {
+                await api.establecerPassword(token, pass);
+                mostrarOk('✓ Cuenta activada. Redirigiendo…');
+                setTimeout(() => window.location.href = 'home.html', 900);
+            } catch (err) {
+                mostrarError(err.message || 'No se pudo activar la cuenta.');
+            } finally {
+                $('#btnSubmit').disabled = false;
+                $('#btnSubmit').textContent = 'Activar y entrar';
+            }
+        });
+    </script>
+</body>
+</html>

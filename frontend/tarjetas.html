@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tarjetas NFC | Gallemojis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-primary: oklch(42.563% 0.07264 164.331);
+            --accent: oklch(43.2% 0.095 166.913);
+        }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, rgba(113,183,110,0.85), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(110,208,153,0.85), transparent 25%),
+                        var(--bg-primary);
+        }
+        .panel {
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(255,255,255,0.72);
+            backdrop-filter: blur(18px);
+        }
+        .action-button {
+            background-color: var(--accent);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .action-button:hover {
+            background-color: color-mix(in srgb, var(--accent) 75%, black 25%);
+        }
+        .action-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .input {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+        }
+        .input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(43,128,87,0.15);
+        }
+    </style>
+</head>
+<body class="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <main class="w-full max-w-3xl space-y-6">
+
+        <!-- Header -->
+        <header class="panel rounded-3xl p-5 shadow-xl shadow-slate-900/5 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.3em] text-slate-500">Administración</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-tight">Tarjetas NFC / RFID</h1>
+                <p class="text-sm text-slate-600 mt-1">Asigna o reasigna la tarjeta de cada niño de tu salón.</p>
+            </div>
+            <a href="home.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Volver">
+                ← Inicio
+            </a>
+        </header>
+
+        <!-- Formulario de registro -->
+        <section class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <h2 class="text-xl font-semibold mb-1">Registrar tarjeta</h2>
+            <p class="text-sm text-slate-500 mb-5">
+                Escribe el UID a mano o pulsa “Capturar desde módulo” y acerca la tarjeta a cualquier PN532.
+            </p>
+
+            <form id="formTarjeta" class="grid gap-4 sm:grid-cols-2">
+                <label class="text-sm sm:col-span-2">
+                    <span class="block text-slate-700 mb-1">Salón</span>
+                    <select id="selSalon" class="input" required></select>
+                </label>
+
+                <label class="text-sm sm:col-span-2">
+                    <span class="block text-slate-700 mb-1">Niño</span>
+                    <select id="selNino" class="input" required>
+                        <option value="">— Elige un niño —</option>
+                    </select>
+                </label>
+
+                <label class="text-sm sm:col-span-2">
+                    <span class="block text-slate-700 mb-1">UID de la tarjeta</span>
+                    <div class="flex gap-2">
+                        <input id="inpUid" type="text" class="input flex-1 font-mono" placeholder="p.ej. 04:A2:7B:9C" required>
+                        <button id="btnCaptura" type="button" class="rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50">
+                            📡 Capturar
+                        </button>
+                    </div>
+                    <span id="msgCaptura" class="block text-xs text-slate-500 mt-1"></span>
+                </label>
+
+                <label class="text-sm sm:col-span-2 flex items-center gap-2">
+                    <input id="inpActiva" type="checkbox" checked>
+                    <span class="text-slate-700">Tarjeta activa</span>
+                </label>
+
+                <div class="sm:col-span-2 flex justify-end gap-3">
+                    <button type="reset" class="rounded-3xl border border-slate-200 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700">
+                        Limpiar
+                    </button>
+                    <button id="btnGuardar" type="submit" class="action-button rounded-3xl px-5 py-3 text-sm font-semibold shadow-lg">
+                        Guardar tarjeta
+                    </button>
+                </div>
+            </form>
+            <p id="msgForm" class="mt-3 text-sm"></p>
+        </section>
+
+        <!-- Listado de tarjetas -->
+        <section class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Inventario</p>
+                    <h2 class="mt-1 text-xl font-semibold">Tarjetas registradas</h2>
+                </div>
+                <button id="btnRecargar" class="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200 transition">
+                    ↻ Recargar
+                </button>
+            </div>
+            <div id="listaTarjetas" class="space-y-3">
+                <p class="text-sm text-slate-500 text-center py-4">Cargando…</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/gallemojis-api.js"></script>
+    <script>
+        if (!api.requireAuth()) throw new Error('No auth');
+        if (api.rol !== 'maestro') {
+            alert('Solo los maestros pueden gestionar tarjetas.');
+            window.location.href = 'home.html';
+        }
+
+        const $ = (sel) => document.querySelector(sel);
+        const selSalon  = $('#selSalon');
+        const selNino   = $('#selNino');
+        const inpUid    = $('#inpUid');
+        const inpActiva = $('#inpActiva');
+        const msgForm   = $('#msgForm');
+        const msgCap    = $('#msgCaptura');
+        const lista     = $('#listaTarjetas');
+
+        let salonActual = null;
+
+        function fmtFecha(iso) {
+            const d = new Date(iso);
+            return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+        }
+
+        // ─── Cargar salones del maestro ──────────────────────
+        async function cargarSalones() {
+            const salones = await api.misSalones();
+            if (!salones.length) {
+                selSalon.innerHTML = '<option>Sin salones asignados</option>';
+                return;
+            }
+            selSalon.innerHTML = salones
+                .map(s => `<option value="${s.id_salon}">${s.nombre} — ${s.grado}</option>`)
+                .join('');
+            salonActual = salones[0].id_salon;
+            selSalon.value = salonActual;
+            await Promise.all([cargarNinos(), cargarTarjetas()]);
+        }
+
+        async function cargarNinos() {
+            selNino.innerHTML = '<option value="">— Elige un niño —</option>';
+            if (!salonActual) return;
+            try {
+                const ninos = await api.ninosDelSalon(salonActual);
+                selNino.innerHTML += ninos
+                    .map(n => `<option value="${n.id_nino}">${n.nombre} ${n.apellido}</option>`)
+                    .join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // ─── Cargar tarjetas ─────────────────────────────────
+        async function cargarTarjetas() {
+            lista.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Cargando…</p>';
+            try {
+                const tarjetas = await api.listarTarjetas(salonActual);
+                if (!tarjetas.length) {
+                    lista.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">No hay tarjetas registradas en este salón.</p>';
+                    return;
+                }
+                lista.innerHTML = tarjetas.map(renderTarjeta).join('');
+            } catch (err) {
+                lista.innerHTML = `<p class="text-sm text-red-500 text-center py-4">${err.message}</p>`;
+            }
+        }
+
+        function renderTarjeta(t) {
+            const estadoColor = t.activa ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600';
+            const estadoTxt   = t.activa ? 'Activa' : 'Inactiva';
+            return `
+            <article class="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm flex items-center justify-between gap-4">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <span class="text-2xl">💳</span>
+                    <div class="min-w-0">
+                        <p class="font-semibold text-slate-900 truncate">${t.nombre_nino} ${t.apellido_nino}</p>
+                        <p class="text-xs font-mono text-slate-500 truncate">UID: ${t.uid}</p>
+                        <p class="text-xs text-slate-400 mt-1">Asignada el ${fmtFecha(t.fecha_asignacion)}</p>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-2 shrink-0">
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${estadoColor}">${estadoTxt}</span>
+                    <div class="flex gap-2 text-xs">
+                        <button class="text-slate-600 hover:underline" data-action="toggle" data-id="${t.id_tarjeta}" data-activa="${t.activa}">
+                            ${t.activa ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button class="text-red-500 hover:underline" data-action="delete" data-id="${t.id_tarjeta}">
+                            Eliminar
+                        </button>
+                    </div>
+                </div>
+            </article>`;
+        }
+
+        // ─── Submit ──────────────────────────────────────────
+        $('#formTarjeta').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msgForm.textContent = '';
+            const idNino = selNino.value;
+            const uid    = inpUid.value.trim();
+            if (!idNino || !uid) {
+                msgForm.textContent = 'Faltan datos.';
+                msgForm.className = 'mt-3 text-sm text-red-500';
+                return;
+            }
+            try {
+                await api.registrarTarjeta({ uid, idNino, activa: inpActiva.checked });
+                msgForm.textContent = '✓ Tarjeta guardada.';
+                msgForm.className = 'mt-3 text-sm text-emerald-600';
+                inpUid.value = '';
+                selNino.value = '';
+                await cargarTarjetas();
+            } catch (err) {
+                msgForm.textContent = err.message;
+                msgForm.className = 'mt-3 text-sm text-red-500';
+            }
+        });
+
+        // ─── Cambio de salón ─────────────────────────────────
+        selSalon.addEventListener('change', async () => {
+            salonActual = selSalon.value;
+            await Promise.all([cargarNinos(), cargarTarjetas()]);
+        });
+
+        // ─── Captura asistida de UID ─────────────────────────
+        let capturando = false;
+        $('#btnCaptura').addEventListener('click', async () => {
+            if (capturando) return;
+            capturando = true;
+            msgCap.textContent = 'Esperando tap en un módulo… (10s)';
+            msgCap.className = 'block text-xs text-slate-500 mt-1';
+
+            const baseline = (await api.ultimoUid().catch(() => null))?.fecha || null;
+            const t0 = Date.now();
+            const iv = setInterval(async () => {
+                try {
+                    const u = await api.ultimoUid();
+                    if (u && u.uid && u.fecha !== baseline) {
+                        inpUid.value = u.uid;
+                        msgCap.textContent = `✓ UID capturado: ${u.uid}`;
+                        msgCap.className = 'block text-xs text-emerald-600 mt-1';
+                        clearInterval(iv);
+                        capturando = false;
+                        return;
+                    }
+                } catch (_) {/* sigue intentando */}
+                if (Date.now() - t0 > 10_000) {
+                    clearInterval(iv);
+                    capturando = false;
+                    msgCap.textContent = '⏱ No se detectó ningún tap. Intenta de nuevo.';
+                    msgCap.className = 'block text-xs text-orange-500 mt-1';
+                }
+            }, 700);
+        });
+
+        // ─── Acciones de la lista (toggle / eliminar) ────────
+        lista.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            const action = btn.dataset.action;
+
+            try {
+                if (action === 'toggle') {
+                    const activaActual = btn.dataset.activa === 'true';
+                    await api.actualizarTarjeta(id, { activa: !activaActual });
+                } else if (action === 'delete') {
+                    if (!confirm('¿Eliminar esta tarjeta?')) return;
+                    await api.eliminarTarjeta(id);
+                }
+                await cargarTarjetas();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        $('#btnRecargar').addEventListener('click', cargarTarjetas);
+
+        // ─── Init ────────────────────────────────────────────
+        cargarSalones().catch(err => {
+            lista.innerHTML = `<p class="text-sm text-red-500 text-center py-4">${err.message}</p>`;
+        });
+    </script>
+</body>
+</html>

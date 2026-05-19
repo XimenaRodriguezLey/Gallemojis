@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calendario Emocional | Gallemojis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-primary: oklch(42.563% 0.07264 164.331);
+            --accent: oklch(43.2% 0.095 166.913);
+            --accent-contrast: oklch(92.637% 0.04285 117.333);
+        }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, rgba(113,183,110,0.85), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(110,208,153,0.85), transparent 25%),
+                        var(--bg-primary);
+        }
+        .panel {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(255,255,255,0.72);
+            backdrop-filter: blur(18px);
+        }
+        .action-button {
+            background-color: var(--accent);
+            color: white;
+        }
+        .action-button:hover {
+            background-color: color-mix(in srgb, var(--accent) 75%, black 25%);
+        }
+
+        /* Calendario */
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        .cal-header-day {
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            padding: 4px 0;
+        }
+        .cal-day {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            position: relative;
+            border: 2px solid transparent;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #475569;
+            background: rgba(255,255,255,0.5);
+            min-height: 48px;
+        }
+        .cal-day:hover {
+            transform: scale(1.07);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+        .cal-day.empty {
+            background: transparent;
+            cursor: default;
+            pointer-events: none;
+        }
+        .cal-day.hoy {
+            border-color: var(--accent);
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .cal-day.seleccionado {
+            box-shadow: 0 0 0 3px var(--accent);
+        }
+        .cal-day.con-datos {
+            background: rgba(255,255,255,0.85);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .emojis-dia {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1px;
+            margin-top: 2px;
+        }
+        .emojis-dia span {
+            font-size: 0.65rem;
+            line-height: 1;
+        }
+
+        /* Detalle del día */
+        .detalle-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        .emocion-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 12px;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Selector de niño */
+        #selectorNino {
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 14px;
+            padding: 8px 14px;
+            font-size: 0.875rem;
+            color: #334155;
+            outline: none;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <main class="w-full max-w-3xl space-y-6">
+
+        <!-- Header -->
+        <header class="panel rounded-3xl p-5 shadow-xl shadow-slate-900/5 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.3em] text-slate-500">Historial</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-tight">Calendario emocional</h1>
+                <div id="roleBadge" class="mt-2 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"></div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="home.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Inicio">🏠</a>
+                <a href="notifications.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Notificaciones">🔔</a>
+                <button onclick="cerrarSesion()" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5 text-red-400" title="Cerrar sesión">↩</button>
+            </div>
+        </header>
+
+        <!-- Selector de niño (visible para maestros con varios alumnos) -->
+        <section id="secSelector" class="hidden panel rounded-3xl p-5 shadow-xl shadow-slate-900/5">
+            <label class="text-sm font-medium text-slate-600 mb-2 block">Seleccionar alumno</label>
+            <select id="selectorNino" onchange="cambiarNino(this.value)">
+                <option value="">Cargando...</option>
+            </select>
+        </section>
+
+        <!-- Navegación del mes -->
+        <section class="panel rounded-3xl p-5 shadow-xl shadow-slate-900/5">
+            <div class="flex items-center justify-between mb-5">
+                <button onclick="cambiarMes(-1)"
+                    class="rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                    ← Anterior
+                </button>
+                <h2 id="mesLabel" class="text-lg font-semibold text-slate-800 capitalize"></h2>
+                <button onclick="cambiarMes(1)"
+                    class="rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                    Siguiente →
+                </button>
+            </div>
+
+            <!-- Días de la semana -->
+            <div class="cal-grid mb-2">
+                <div class="cal-header-day">Dom</div>
+                <div class="cal-header-day">Lun</div>
+                <div class="cal-header-day">Mar</div>
+                <div class="cal-header-day">Mié</div>
+                <div class="cal-header-day">Jue</div>
+                <div class="cal-header-day">Vie</div>
+                <div class="cal-header-day">Sáb</div>
+            </div>
+
+            <!-- Grilla de días -->
+            <div id="calGrid" class="cal-grid">
+                <!-- Generado por JS -->
+            </div>
+
+            <!-- Leyenda -->
+            <div class="mt-5 flex flex-wrap gap-3 justify-center" id="leyenda"></div>
+        </section>
+
+        <!-- Detalle del día seleccionado -->
+        <section id="secDetalle" class="hidden panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Registros del día</p>
+                    <h2 id="detalleLabel" class="mt-1 text-xl font-semibold"></h2>
+                </div>
+                <span id="detalleCount" class="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700"></span>
+            </div>
+            <div id="listaDetalle" class="space-y-3"></div>
+        </section>
+
+        <!-- Resumen del mes -->
+        <section class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <p class="text-sm font-medium text-slate-500 mb-1">Estadísticas</p>
+            <h2 class="text-xl font-semibold mb-4">Resumen del mes</h2>
+            <div id="resumen" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div class="skeleton h-16"></div>
+                <div class="skeleton h-16"></div>
+                <div class="skeleton h-16"></div>
+            </div>
+        </section>
+
+        <footer class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <div class="grid gap-4 sm:grid-cols-2">
+                <a href="home.html" class="action-button rounded-3xl px-5 py-3 text-sm font-semibold shadow-lg text-center">← Volver al inicio</a>
+                <a href="notifications.html" class="rounded-3xl border border-slate-200 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm text-center transition hover:-translate-y-0.5">🔔 Notificaciones</a>
+            </div>
+        </footer>
+    </main>
+
+    <script src="js/gallemojis-api.js"></script>
+    <script>
+        if (!api.requireAuth()) throw new Error('No auth');
+
+        const EMOJIS = {
+            alegria:  { emoji: '😄', color: '#F59E0B' },
+            tristeza: { emoji: '😢', color: '#6495ED' },
+            enojo:    { emoji: '😠', color: '#EF4444' },
+            calma:    { emoji: '😌', color: '#10B981' },
+            miedo:    { emoji: '😨', color: '#8B5CF6' },
+        };
+
+        let todosRegistros = []; // todos los registros del niño/salón seleccionado
+        let ninoActualId   = null;
+        let mesActual      = new Date();
+        let diaSeleccionado = null;
+
+        // Agrupar registros por fecha "YYYY-MM-DD"
+        function agruparPorFecha(registros) {
+            const mapa = {};
+            registros.forEach(r => {
+                const key = r.fecha_hora.slice(0, 10);
+                if (!mapa[key]) mapa[key] = [];
+                mapa[key].push(r);
+            });
+            return mapa;
+        }
+
+        function fmtHora(iso) {
+            return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ── Calendario ────────────────────────────────────────────────────────
+
+        function renderCalendario() {
+            const hoy = new Date();
+            const year = mesActual.getFullYear();
+            const month = mesActual.getMonth();
+
+            document.getElementById('mesLabel').textContent =
+                mesActual.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+            const primerDia  = new Date(year, month, 1).getDay();
+            const diasMes    = new Date(year, month + 1, 0).getDate();
+            const porFecha   = agruparPorFecha(todosRegistros);
+
+            const grid = document.getElementById('calGrid');
+            grid.innerHTML = '';
+
+            // Celdas vacías antes del día 1
+            for (let i = 0; i < primerDia; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'cal-day empty';
+                grid.appendChild(empty);
+            }
+
+            for (let d = 1; d <= diasMes; d++) {
+                const fecha = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const esHoy = hoy.getFullYear() === year && hoy.getMonth() === month && hoy.getDate() === d;
+                const registrosDia = porFecha[fecha] || [];
+
+                const cell = document.createElement('div');
+                cell.className = `cal-day${esHoy ? ' hoy' : ''}${registrosDia.length ? ' con-datos' : ''}${diaSeleccionado === fecha ? ' seleccionado' : ''}`;
+                cell.dataset.fecha = fecha;
+
+                // Número del día
+                const num = document.createElement('span');
+                num.textContent = d;
+                cell.appendChild(num);
+
+                // Emojis del día (máx 3)
+                if (registrosDia.length) {
+                    const emDiv = document.createElement('div');
+                    emDiv.className = 'emojis-dia';
+                    const emociones = [...new Set(registrosDia.map(r => r.emocion))].slice(0, 3);
+                    emociones.forEach(em => {
+                        const s = document.createElement('span');
+                        s.textContent = EMOJIS[em]?.emoji || '🙂';
+                        emDiv.appendChild(s);
+                    });
+                    cell.appendChild(emDiv);
+                }
+
+                cell.addEventListener('click', () => seleccionarDia(fecha, registrosDia));
+                grid.appendChild(cell);
+            }
+
+            renderLeyenda();
+            renderResumen();
+        }
+
+        function seleccionarDia(fecha, registros) {
+            diaSeleccionado = fecha;
+            // Quitar selección anterior
+            document.querySelectorAll('.cal-day.seleccionado').forEach(el =>
+                el.classList.remove('seleccionado'));
+            document.querySelector(`.cal-day[data-fecha="${fecha}"]`)?.classList.add('seleccionado');
+
+            const seccion = document.getElementById('secDetalle');
+            seccion.classList.remove('hidden');
+
+            const [y, m, d] = fecha.split('-');
+            document.getElementById('detalleLabel').textContent =
+                new Date(y, m-1, d).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+
+            document.getElementById('detalleCount').textContent =
+                `${registros.length} registro${registros.length !== 1 ? 's' : ''}`;
+
+            document.getElementById('listaDetalle').innerHTML = registros.length
+                ? registros
+                    .sort((a,b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))
+                    .map(r => {
+                        const em = EMOJIS[r.emocion] || { emoji: '🙂', color: '#888' };
+                        return `
+                        <div class="detalle-item">
+                            <span class="text-xl">${em.emoji}</span>
+                            <div class="emocion-dot" style="background:${em.color}"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold text-slate-800">${r.nombre_nino} ${r.apellido_nino}</p>
+                                <p class="text-xs text-slate-500 capitalize">${r.emocion}</p>
+                            </div>
+                            <time class="text-xs text-slate-400">${fmtHora(r.fecha_hora)}</time>
+                        </div>`;
+                    }).join('')
+                : '<p class="text-sm text-slate-500 text-center py-4">Sin registros para este día.</p>';
+
+            seccion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function renderLeyenda() {
+            const emocionesMes = new Set(todosRegistros
+                .filter(r => {
+                    const d = new Date(r.fecha_hora);
+                    return d.getFullYear() === mesActual.getFullYear() &&
+                           d.getMonth() === mesActual.getMonth();
+                })
+                .map(r => r.emocion)
+            );
+
+            const leyenda = document.getElementById('leyenda');
+            leyenda.innerHTML = [...emocionesMes].map(em => {
+                const info = EMOJIS[em] || { emoji: '🙂', color: '#888' };
+                return `<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-white"
+                             style="background:${info.color}">
+                    ${info.emoji} ${em}
+                </span>`;
+            }).join('');
+        }
+
+        function renderResumen() {
+            const registrosMes = todosRegistros.filter(r => {
+                const d = new Date(r.fecha_hora);
+                return d.getFullYear() === mesActual.getFullYear() &&
+                       d.getMonth() === mesActual.getMonth();
+            });
+
+            const conteo = registrosMes.reduce((acc, r) => {
+                acc[r.emocion] = (acc[r.emocion] || 0) + 1; return acc;
+            }, {});
+
+            const sorted = Object.entries(conteo).sort((a,b) => b[1]-a[1]);
+            const total  = registrosMes.length;
+
+            document.getElementById('resumen').innerHTML = sorted.length
+                ? sorted.map(([em, cnt]) => {
+                    const info = EMOJIS[em] || { emoji: '🙂', color: '#888' };
+                    const pct  = total ? Math.round((cnt / total) * 100) : 0;
+                    return `
+                    <div class="rounded-2xl p-4 text-white text-center" style="background:${info.color}">
+                        <p class="text-2xl">${info.emoji}</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide mt-1">${em}</p>
+                        <p class="text-lg font-bold mt-1">${cnt}</p>
+                        <p class="text-xs opacity-80">${pct}%</p>
+                    </div>`;
+                }).join('')
+                : '<p class="col-span-3 text-sm text-slate-500 text-center py-4">Sin registros en este mes.</p>';
+        }
+
+        function cambiarMes(delta) {
+            mesActual = new Date(mesActual.getFullYear(), mesActual.getMonth() + delta, 1);
+            diaSeleccionado = null;
+            document.getElementById('secDetalle').classList.add('hidden');
+            renderCalendario();
+        }
+
+        // ── Carga de datos ────────────────────────────────────────────────────
+
+        async function cargarRegistros(idNino) {
+            ninoActualId = idNino;
+            todosRegistros = await api.historialNino(idNino, 500);
+            renderCalendario();
+        }
+
+        async function cargarRegistrosSalon(idSalon) {
+            todosRegistros = await api.historialSalon(idSalon, 500);
+            renderCalendario();
+        }
+
+        function cambiarNino(idNino) {
+            if (!idNino) return;
+            cargarRegistros(idNino);
+        }
+
+        async function init() {
+            // Badge de rol
+            const badge = document.getElementById('roleBadge');
+            if (api.rol === 'maestro') {
+                badge.textContent = 'Maestro';
+                badge.className = 'mt-2 inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700';
+            } else {
+                badge.textContent = 'Padre de Familia';
+                badge.className = 'mt-2 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700';
+            }
+
+            // Mes actual por defecto
+            mesActual = new Date();
+            mesActual.setDate(1);
+
+            try {
+                if (api.rol === 'padre') {
+                    const hijos = await api.misHijos();
+                    if (!hijos.length) {
+                        document.getElementById('calGrid').innerHTML =
+                            '<p class="col-span-7 text-sm text-slate-500 text-center py-4">No hay hijos registrados.</p>';
+                        return;
+                    }
+
+                    // Si hay más de un hijo, mostrar selector
+                    if (hijos.length > 1) {
+                        const sec = document.getElementById('secSelector');
+                        const sel = document.getElementById('selectorNino');
+                        sec.classList.remove('hidden');
+                        sel.innerHTML = hijos.map(h =>
+                            `<option value="${h.id_nino}">${h.nombre} ${h.apellido}</option>`
+                        ).join('');
+                    }
+
+                    // Revisar si viene id_nino en la URL
+                    const params = new URLSearchParams(window.location.search);
+                    const ninoUrl = params.get('nino');
+                    const primerNino = ninoUrl && hijos.find(h => h.id_nino === ninoUrl)
+                        ? ninoUrl : hijos[0].id_nino;
+
+                    if (hijos.length > 1) {
+                        document.getElementById('selectorNino').value = primerNino;
+                    }
+
+                    await cargarRegistros(primerNino);
+
+                } else {
+                    // Maestro: carga el primer salón, muestra selector de alumnos
+                    const salones = await api.misSalones();
+                    if (!salones.length) {
+                        document.getElementById('calGrid').innerHTML =
+                            '<p class="col-span-7 text-sm text-slate-500 text-center py-4">No tienes salones registrados.</p>';
+                        return;
+                    }
+
+                    const salon = salones[0];
+                    const ninos = await api.ninosDelSalon(salon.id_salon);
+
+                    if (ninos.length) {
+                        const sec = document.getElementById('secSelector');
+                        const sel = document.getElementById('selectorNino');
+                        sec.classList.remove('hidden');
+                        sel.innerHTML = `<option value="__salon__">Todo el salón — ${salon.nombre}</option>` +
+                            ninos.map(n => `<option value="${n.id_nino}">${n.nombre} ${n.apellido}</option>`).join('');
+
+                        sel.addEventListener('change', (e) => {
+                            if (e.target.value === '__salon__') {
+                                cargarRegistrosSalon(salon.id_salon);
+                            } else {
+                                cambiarNino(e.target.value);
+                            }
+                        });
+                    }
+
+                    // Por defecto carga todo el salón
+                    await cargarRegistrosSalon(salon.id_salon);
+                }
+            } catch(err) {
+                console.error(err);
+                document.getElementById('calGrid').innerHTML =
+                    `<p class="col-span-7 text-sm text-red-400 text-center py-4">Error al cargar: ${err.message}</p>`;
+            }
+        }
+
+        function cerrarSesion() { api.logout(); window.location.href = 'index.html'; }
+
+        init();
+    </script>
+</body>
+</html>

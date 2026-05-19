@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Gallemojis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-primary: oklch(42.563% 0.07264 164.331);
+            --bg-panel: oklch(100% 0.02 90);
+            --text-primary: oklch(12% 0.08 45);
+            --text-muted: oklch(40% 0.05 45);
+            --border: oklch(80% 0.04 70);
+            --accent: oklch(43.2% 0.095 166.913);
+            --accent-contrast: oklch(92.637% 0.04285 117.333);
+        }
+
+        body {
+            background: radial-gradient(circle at top right, rgba(113, 183, 110, 0.85), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(110, 208, 153, 0.85), transparent 25%),
+                        var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .login-panel {
+            background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(209,225,209,0.78));
+            border: 1px solid rgba(255,255,255,0.65);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.12);
+            backdrop-filter: blur(18px);
+        }
+
+        .btn-accent {
+            background-color: var(--accent);
+            color: var(--accent-contrast);
+            transition: background-color 0.2s;
+        }
+
+        .btn-accent:hover {
+            background-color: color-mix(in srgb, var(--accent) 80%, black 23%);
+        }
+
+        .btn-accent:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .input-field {
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(0,0,0,0.08);
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(60, 140, 80, 0.15);
+        }
+
+        #errorMsg {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #dc2626;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
+    <div class="w-full max-w-md">
+        <section class="login-panel rounded-3xl p-8 sm:p-10">
+            <div class="mb-8 text-center">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Bienvenido</p>
+                <h1 class="mt-4 text-3xl font-semibold uppercase tracking-[0.35em]">Gallemojis</h1>
+                <p class="mt-2 text-sm text-slate-600">Sistema de inteligencia emocional escolar.</p>
+            </div>
+
+            <div id="errorMsg"></div>
+
+            <form class="space-y-6 mt-4" id="loginForm">
+                <div>
+                    <label for="correo" class="block text-sm font-medium text-slate-700">Correo electrónico</label>
+                    <input id="correo" name="correo" type="email" autocomplete="email" required
+                        class="input-field mt-2 block w-full rounded-2xl px-4 py-3 text-sm shadow-sm" />
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-700">Contraseña</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required
+                        class="input-field mt-2 block w-full rounded-2xl px-4 py-3 text-sm shadow-sm" />
+                </div>
+
+                <div class="flex items-center justify-between text-sm text-slate-600">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" id="recordarme" class="h-4 w-4 rounded border-slate-300" />
+                        Recordarme
+                    </label>
+                    <a href="#" class="font-medium text-slate-700 hover:text-slate-900">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <button type="submit" id="btnLogin"
+                    class="btn-accent mt-4 w-full rounded-2xl px-4 py-3 text-sm font-semibold shadow-lg shadow-slate-300/40">
+                    Ingresar
+                </button>
+            </form>
+        </section>
+    </div>
+
+    <script src="js/gallemojis-api.js"></script>
+    <script>
+        // Si ya hay sesión activa, redirigir directo
+        if (api.isLoggedIn()) {
+            window.location.href = "home.html";
+        }
+
+        const form    = document.getElementById('loginForm');
+        const btnLogin = document.getElementById('btnLogin');
+        const errorMsg = document.getElementById('errorMsg');
+
+        function mostrarError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.style.display = 'block';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.style.display = 'none';
+            btnLogin.disabled = true;
+            btnLogin.textContent = 'Ingresando...';
+
+            const correo   = document.getElementById('correo').value.trim();
+            const password = document.getElementById('password').value;
+
+            try {
+                const data = await api.login(correo, password);
+                // Redirigir según rol
+                window.location.href = "home.html";
+            } catch (err) {
+                mostrarError(err.message || 'Credenciales incorrectas. Intenta de nuevo.');
+            } finally {
+                btnLogin.disabled = false;
+                btnLogin.textContent = 'Ingresar';
+            }
+        });
+    </script>
+</body>
+</html>

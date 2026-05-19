@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inicio | Gallemojis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-primary: oklch(42.563% 0.07264 164.331);
+            --accent: oklch(43.2% 0.095 166.913);
+            --accent-contrast: oklch(92.637% 0.04285 117.333);
+        }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, rgba(113,183,110,0.85), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(110,208,153,0.85), transparent 25%),
+                        var(--bg-primary);
+        }
+        .panel {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(255,255,255,0.72);
+            backdrop-filter: blur(18px);
+        }
+        .action-button {
+            background-color: var(--accent);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .action-button:hover {
+            background-color: color-mix(in srgb, var(--accent) 75%, black 25%);
+        }
+        .emocion-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 12px;
+            height: 72px;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <main class="w-full max-w-3xl space-y-6">
+
+        <!-- Header -->
+        <header class="panel rounded-3xl p-5 shadow-xl shadow-slate-900/5 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.3em] text-slate-500">Panel principal</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-tight" id="saludo">Cargando...</h1>
+                <div id="roleBadge" class="mt-2 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"></div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="home.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Inicio">
+                    🏠
+                </a>
+                <a href="notifications.html" class="relative rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Notificaciones">
+                    🔔
+                    <span id="notifBadge" class="absolute -top-1 -right-1 hidden h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"></span>
+                </a>
+                <a href="calendario.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Calendario emocional">
+                    📅
+                </a>
+                <a id="navAlumnos" href="alumnos.html" class="hidden rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Alumnos">
+                    👦
+                </a>
+                <a id="navTarjetas" href="tarjetas.html" class="hidden rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Tarjetas NFC">
+                    💳
+                </a>
+                <a id="navMensajes" href="mensajes.html" class="hidden rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Mensajes a padres">
+                    ✉️
+                </a>
+                <button onclick="cerrarSesion()" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5 text-red-400" title="Cerrar sesión">
+                    ↩
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats rápidas (solo maestro) -->
+        <div id="statsGrid" class="hidden grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div class="panel rounded-3xl p-4 shadow-lg text-center">
+                <p class="text-3xl font-bold text-slate-800" id="statNinos">—</p>
+                <p class="text-xs text-slate-500 mt-1">Niños en el salón</p>
+            </div>
+            <div class="panel rounded-3xl p-4 shadow-lg text-center">
+                <p class="text-3xl font-bold text-slate-800" id="statRegistros">—</p>
+                <p class="text-xs text-slate-500 mt-1">Registros hoy</p>
+            </div>
+            <div class="panel rounded-3xl p-4 shadow-lg text-center col-span-2 sm:col-span-1">
+                <p class="text-3xl font-bold text-slate-800" id="statEmocion">—</p>
+                <p class="text-xs text-slate-500 mt-1">Emoción frecuente</p>
+            </div>
+        </div>
+
+        <!-- Mis hijos (solo padre) -->
+        <section id="secHijos" class="hidden panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <p class="text-sm font-medium text-slate-500">Mi familia</p>
+            <h2 class="mt-1 text-xl font-semibold mb-4">Mis hijos</h2>
+            <div id="listHijos" class="space-y-3">
+                <div class="skeleton"></div>
+            </div>
+        </section>
+
+        <!-- Últimos registros emocionales -->
+        <section class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Actividad reciente</p>
+                    <h2 class="mt-1 text-xl font-semibold">Historial emocional</h2>
+                </div>
+                <a href="calendario.html" class="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200 transition">
+                    Ver todo →
+                </a>
+            </div>
+            <div id="listRegistros" class="space-y-3">
+                <div class="skeleton"></div>
+                <div class="skeleton"></div>
+                <div class="skeleton"></div>
+            </div>
+        </section>
+
+        <!-- Últimas notificaciones -->
+        <section class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Alertas</p>
+                    <h2 class="mt-1 text-xl font-semibold">Notificaciones recientes</h2>
+                </div>
+                <a href="notifications.html" class="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200 transition">
+                    Ver todas →
+                </a>
+            </div>
+            <div id="listNotifs" class="space-y-3">
+                <div class="skeleton"></div>
+                <div class="skeleton"></div>
+            </div>
+        </section>
+
+        <!-- Footer acciones -->
+        <footer class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <div class="grid gap-4 sm:grid-cols-2">
+                <a href="calendario.html" class="action-button rounded-3xl px-5 py-3 text-sm font-semibold shadow-lg text-center">
+                    📅 Ver calendario emocional
+                </a>
+                <a href="notifications.html" class="rounded-3xl border border-slate-200 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm text-center transition hover:-translate-y-0.5">
+                    🔔 Ver notificaciones
+                </a>
+                <a id="ctaAlumnos" href="alumnos.html" class="hidden rounded-3xl border border-slate-200 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm text-center transition hover:-translate-y-0.5">
+                    👦 Gestionar alumnos
+                </a>
+                <a id="ctaTarjetas" href="tarjetas.html" class="hidden rounded-3xl border border-slate-200 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm text-center transition hover:-translate-y-0.5">
+                    💳 Gestionar tarjetas NFC / RFID
+                </a>
+                <a id="ctaMensajes" href="mensajes.html" class="hidden sm:col-span-2 rounded-3xl border border-slate-200 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm text-center transition hover:-translate-y-0.5">
+                    ✉️ Enviar mensajes a padres
+                </a>
+            </div>
+        </footer>
+    </main>
+
+    <script src="js/gallemojis-api.js"></script>
+    <script>
+        if (!api.requireAuth()) throw new Error('No auth');
+
+        const EMOJIS = {
+            alegria:  { emoji: '😄', color: '#F59E0B' },
+            tristeza: { emoji: '😢', color: '#6495ED' },
+            enojo:    { emoji: '😠', color: '#EF4444' },
+            calma:    { emoji: '😌', color: '#10B981' },
+            miedo:    { emoji: '😨', color: '#8B5CF6' },
+        };
+
+        function fmtFecha(iso) {
+            const d = new Date(iso);
+            return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) +
+                   ' • ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function renderRegistro(r) {
+            const em = EMOJIS[r.emocion] || { emoji: '🙂', color: r.color_hex || '#888' };
+            return `
+            <article class="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">${em.emoji}</span>
+                    <div>
+                        <p class="font-semibold text-slate-900">${r.nombre_nino} ${r.apellido_nino}</p>
+                        <span class="emocion-badge" style="background:${em.color}">${r.emocion}</span>
+                    </div>
+                </div>
+                <time class="text-xs text-slate-400 shrink-0">${fmtFecha(r.fecha_hora)}</time>
+            </article>`;
+        }
+
+        function renderNotif(n) {
+            const icono = n.leida ? '🔔' : '🔴';
+            return `
+            <article class="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex gap-2 items-start">
+                        <span>${icono}</span>
+                        <p class="text-sm text-slate-700">${n.mensaje}</p>
+                    </div>
+                    <time class="text-xs text-slate-400 shrink-0">${fmtFecha(n.fecha)}</time>
+                </div>
+            </article>`;
+        }
+
+        async function cargarDatosMaestro() {
+            document.getElementById('statsGrid').classList.remove('hidden');
+            document.getElementById('statsGrid').classList.add('grid');
+
+            const salones = await api.misSalones();
+            if (!salones.length) {
+                document.getElementById('listRegistros').innerHTML =
+                    '<p class="text-sm text-slate-500 text-center py-4">No tienes salones registrados aún.</p>';
+                return;
+            }
+
+            const salon = salones[0];
+            const [ninos, registros] = await Promise.all([
+                api.ninosDelSalon(salon.id_salon),
+                api.historialSalon(salon.id_salon, 10),
+            ]);
+
+            // Stats
+            document.getElementById('statNinos').textContent = ninos.length;
+
+            const hoy = new Date().toDateString();
+            const hoyCount = registros.filter(r => new Date(r.fecha_hora).toDateString() === hoy).length;
+            document.getElementById('statRegistros').textContent = hoyCount;
+
+            const freq = registros.reduce((acc, r) => {
+                acc[r.emocion] = (acc[r.emocion] || 0) + 1; return acc;
+            }, {});
+            const top = Object.entries(freq).sort((a,b) => b[1]-a[1])[0];
+            const em = top ? EMOJIS[top[0]] : null;
+            document.getElementById('statEmocion').textContent = top ? `${em?.emoji || ''} ${top[0]}` : '—';
+
+            // Registros
+            document.getElementById('listRegistros').innerHTML = registros.length
+                ? registros.map(renderRegistro).join('')
+                : '<p class="text-sm text-slate-500 text-center py-4">Sin registros recientes.</p>';
+        }
+
+        async function cargarDatosPadre() {
+            document.getElementById('secHijos').classList.remove('hidden');
+
+            const [hijos, notifs] = await Promise.all([
+                api.misHijos(),
+                api.misNotificaciones(false),
+            ]);
+
+            // Hijos
+            document.getElementById('listHijos').innerHTML = hijos.length
+                ? hijos.map(h => `
+                    <div class="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">👦</span>
+                            <p class="font-semibold text-slate-900">${h.nombre} ${h.apellido}</p>
+                        </div>
+                        <a href="calendario.html?nino=${h.id_nino}" class="text-xs text-slate-500 hover:text-slate-800 transition">Ver historial →</a>
+                    </div>`).join('')
+                : '<p class="text-sm text-slate-500 text-center py-4">No hay hijos registrados.</p>';
+
+            // Registros del primer hijo
+            if (hijos.length) {
+                const registros = await api.historialNino(hijos[0].id_nino, 5);
+                document.getElementById('listRegistros').innerHTML = registros.length
+                    ? registros.map(renderRegistro).join('')
+                    : '<p class="text-sm text-slate-500 text-center py-4">Sin registros recientes.</p>';
+            } else {
+                document.getElementById('listRegistros').innerHTML =
+                    '<p class="text-sm text-slate-500 text-center py-4">Sin registros aún.</p>';
+            }
+
+            // Notificaciones
+            const noLeidas = notifs.filter(n => !n.leida);
+            if (noLeidas.length) {
+                const badge = document.getElementById('notifBadge');
+                badge.textContent = noLeidas.length;
+                badge.classList.remove('hidden');
+            }
+
+            document.getElementById('listNotifs').innerHTML = notifs.slice(0,3).length
+                ? notifs.slice(0,3).map(renderNotif).join('')
+                : '<p class="text-sm text-slate-500 text-center py-4">Sin notificaciones.</p>';
+        }
+
+        async function init() {
+            // Badge de rol
+            const badge = document.getElementById('roleBadge');
+            const saludo = document.getElementById('saludo');
+            saludo.textContent = `Hola, ${api.nombre?.split(' ')[0] || 'usuario'}`;
+
+            if (api.rol === 'maestro') {
+                badge.textContent = 'Maestro';
+                badge.className = 'mt-2 inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700';
+                document.getElementById('navAlumnos')?.classList.remove('hidden');
+                document.getElementById('navTarjetas')?.classList.remove('hidden');
+                document.getElementById('navMensajes')?.classList.remove('hidden');
+                document.getElementById('ctaAlumnos')?.classList.remove('hidden');
+                document.getElementById('ctaTarjetas')?.classList.remove('hidden');
+                document.getElementById('ctaMensajes')?.classList.remove('hidden');
+            } else {
+                badge.textContent = 'Padre de Familia';
+                badge.className = 'mt-2 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700';
+            }
+
+            try {
+                if (api.rol === 'maestro') {
+                    await cargarDatosMaestro();
+                } else {
+                    await cargarDatosPadre();
+                }
+            } catch(err) {
+                console.error(err);
+                document.getElementById('listRegistros').innerHTML =
+                    `<p class="text-sm text-red-500 text-center py-4">Error al cargar datos: ${err.message}</p>`;
+            }
+        }
+
+        function cerrarSesion() {
+            api.logout();
+            window.location.href = 'index.html';
+        }
+
+        init();
+    </script>
+</body>
+</html>

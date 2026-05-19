@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mensajes a padres | Gallemojis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-primary: oklch(42.563% 0.07264 164.331);
+            --accent: oklch(43.2% 0.095 166.913);
+        }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, rgba(113,183,110,0.85), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(110,208,153,0.85), transparent 25%),
+                        var(--bg-primary);
+        }
+        .panel {
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(255,255,255,0.72);
+            backdrop-filter: blur(18px);
+        }
+        .action-button {
+            background-color: var(--accent);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .action-button:hover {
+            background-color: color-mix(in srgb, var(--accent) 75%, black 25%);
+        }
+        .action-button:disabled { opacity:.6; cursor:not-allowed; }
+        .input, textarea.input {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: none;
+        }
+        .input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(43,128,87,0.15);
+        }
+        .padre-row {
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .padre-row:hover { background: #f1f5f9; }
+        .padre-row.activo {
+            background: #ecfdf5;
+            border-left: 4px solid var(--accent);
+        }
+        .badge-num {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.35;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .bubble.maestro {
+            background: var(--accent);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        .bubble.padre {
+            background: #e2e8f0;
+            color: #1e293b;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+        .scroll-y { overflow-y: auto; }
+    </style>
+</head>
+<body class="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <main class="w-full max-w-5xl space-y-6">
+
+        <header class="panel rounded-3xl p-5 shadow-xl shadow-slate-900/5 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.3em] text-slate-500">Comunicación</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-tight">Mensajes a padres</h1>
+                <p class="text-sm text-slate-600 mt-1">
+                    Manda comentarios privados a los padres de tus alumnos. Ellos solo pueden leer.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="alumnos.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Alumnos">👦</a>
+                <a href="home.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Volver">← Inicio</a>
+            </div>
+        </header>
+
+        <section class="panel rounded-3xl shadow-xl shadow-slate-900/5 overflow-hidden grid grid-cols-1 md:grid-cols-3" style="height: 70vh;">
+
+            <!-- Lista de padres -->
+            <aside class="border-r border-slate-200 flex flex-col">
+                <div class="p-4 border-b border-slate-200 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-600">Padres</h2>
+                    <button id="btnRecargarPadres" class="text-xs text-slate-500 hover:text-slate-800">↻</button>
+                </div>
+                <div id="listaPadres" class="scroll-y flex-1">
+                    <p class="text-sm text-slate-500 text-center py-6">Cargando…</p>
+                </div>
+            </aside>
+
+            <!-- Panel de conversación -->
+            <section class="md:col-span-2 flex flex-col">
+                <div id="cabeceraChat" class="p-4 border-b border-slate-200 bg-white/80 hidden">
+                    <p class="font-semibold text-slate-900" id="chatNombre">—</p>
+                    <p class="text-xs text-slate-500" id="chatCorreo">—</p>
+                </div>
+
+                <div id="vacioChat" class="flex-1 flex items-center justify-center text-center px-6">
+                    <p class="text-sm text-slate-500">Selecciona un padre de la lista para empezar.</p>
+                </div>
+
+                <div id="mensajesChat" class="hidden flex-1 scroll-y p-4 space-y-2 bg-slate-50/40"></div>
+
+                <form id="formMensaje" class="hidden p-3 border-t border-slate-200 bg-white/95">
+                    <div class="flex items-end gap-2">
+                        <textarea id="inpMensaje" class="input" rows="2" placeholder="Escribe un comentario privado para el padre…" required></textarea>
+                        <button id="btnEnviar" type="submit" class="action-button rounded-2xl px-5 py-3 text-sm font-semibold shadow-lg">
+                            Enviar
+                        </button>
+                    </div>
+                    <p id="msgError" class="text-xs text-red-500 mt-1"></p>
+                </form>
+            </section>
+        </section>
+    </main>
+
+    <script src="js/gallemojis-api.js"></script>
+    <script>
+        if (!api.requireAuth()) throw new Error('No auth');
+        if (api.rol !== 'maestro') {
+            alert('Solo los maestros pueden enviar mensajes.');
+            window.location.href = 'home.html';
+        }
+
+        const $ = (s) => document.querySelector(s);
+        const listaPadres   = $('#listaPadres');
+        const cabecera      = $('#cabeceraChat');
+        const mensajesChat  = $('#mensajesChat');
+        const vacioChat     = $('#vacioChat');
+        const formMensaje   = $('#formMensaje');
+        const inpMensaje    = $('#inpMensaje');
+        const msgError      = $('#msgError');
+
+        let padreActivo = null;
+
+        function fmtFechaCorta(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const hoy = new Date();
+            if (d.toDateString() === hoy.toDateString()) {
+                return d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+            }
+            return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short' });
+        }
+        function fmtFechaLarga(iso) {
+            const d = new Date(iso);
+            return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short' }) +
+                   ' · ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+        }
+
+        async function cargarPadres() {
+            listaPadres.innerHTML = '<p class="text-sm text-slate-500 text-center py-6">Cargando…</p>';
+            try {
+                const padres = await api.padresDelMaestro();
+                if (!padres.length) {
+                    listaPadres.innerHTML = '<p class="text-sm text-slate-500 text-center py-6">No tienes padres registrados en tus salones.</p>';
+                    return;
+                }
+                listaPadres.innerHTML = padres.map(renderFilaPadre).join('');
+            } catch (err) {
+                listaPadres.innerHTML = `<p class="text-sm text-red-500 text-center py-6">${err.message}</p>`;
+            }
+        }
+
+        function renderFilaPadre(p) {
+            const previa = p.ultimo_contenido
+                ? (p.ultimo_remitente === 'maestro' ? 'Tú: ' : '') + p.ultimo_contenido
+                : 'Sin mensajes aún';
+            const badge = p.no_leidos_por_padre > 0
+                ? `<span class="badge-num">${p.no_leidos_por_padre}</span>`
+                : '';
+            const fechaCorta = fmtFechaCorta(p.ultimo_fecha);
+            const activo = padreActivo?.id_padre === p.id_padre ? 'activo' : '';
+            return `
+            <article class="padre-row ${activo} px-4 py-3 border-b border-slate-100"
+                     data-id="${p.id_padre}"
+                     data-nombre="${p.nombre} ${p.apellido}"
+                     data-correo="${p.correo}">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="font-semibold text-slate-900 truncate">${p.nombre} ${p.apellido}</p>
+                    <time class="text-xs text-slate-400 shrink-0">${fechaCorta}</time>
+                </div>
+                <div class="flex items-center justify-between gap-2 mt-0.5">
+                    <p class="text-xs text-slate-500 truncate flex-1">${previa}</p>
+                    ${badge}
+                </div>
+            </article>`;
+        }
+
+        listaPadres.addEventListener('click', async (e) => {
+            const row = e.target.closest('.padre-row');
+            if (!row) return;
+            padreActivo = {
+                id_padre: row.dataset.id,
+                nombre: row.dataset.nombre,
+                correo: row.dataset.correo,
+            };
+            document.querySelectorAll('.padre-row').forEach(r =>
+                r.classList.toggle('activo', r.dataset.id === padreActivo.id_padre)
+            );
+            await abrirConversacion();
+        });
+
+        async function abrirConversacion() {
+            cabecera.classList.remove('hidden');
+            vacioChat.classList.add('hidden');
+            mensajesChat.classList.remove('hidden');
+            mensajesChat.classList.add('flex', 'flex-col');
+            formMensaje.classList.remove('hidden');
+            $('#chatNombre').textContent = padreActivo.nombre;
+            $('#chatCorreo').textContent = padreActivo.correo;
+            mensajesChat.innerHTML = '<p class="text-sm text-slate-500 text-center py-6">Cargando…</p>';
+
+            try {
+                const mensajes = await api.hiloConPadre(padreActivo.id_padre);
+                if (!mensajes.length) {
+                    mensajesChat.innerHTML = '<p class="text-sm text-slate-500 text-center py-6">Aún no hay mensajes con este padre. Escribe el primero abajo.</p>';
+                    return;
+                }
+                mensajesChat.innerHTML = mensajes.map(renderBurbuja).join('');
+                mensajesChat.scrollTop = mensajesChat.scrollHeight;
+            } catch (err) {
+                mensajesChat.innerHTML = `<p class="text-sm text-red-500 text-center py-6">${err.message}</p>`;
+            }
+        }
+
+        function renderBurbuja(m) {
+            const leido = m.remitente === 'maestro'
+                ? (m.leido ? ' · leído' : ' · entregado')
+                : '';
+            return `
+            <div class="flex flex-col gap-0.5">
+                <div class="bubble ${m.remitente}">${escapar(m.contenido)}</div>
+                <time class="text-[10px] text-slate-400 ${m.remitente === 'maestro' ? 'text-right' : ''}">
+                    ${fmtFechaLarga(m.fecha_envio)}${leido}
+                </time>
+            </div>`;
+        }
+
+        function escapar(t) {
+            const div = document.createElement('div');
+            div.textContent = t;
+            return div.innerHTML;
+        }
+
+        formMensaje.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msgError.textContent = '';
+            if (!padreActivo) return;
+            const txt = inpMensaje.value.trim();
+            if (!txt) return;
+            $('#btnEnviar').disabled = true;
+            try {
+                await api.enviarMensajeAPadre(padreActivo.id_padre, txt);
+                inpMensaje.value = '';
+                await abrirConversacion();
+                await cargarPadres();
+            } catch (err) {
+                msgError.textContent = err.message;
+            } finally {
+                $('#btnEnviar').disabled = false;
+            }
+        });
+
+        // Enter envía, Shift+Enter salto de línea
+        inpMensaje.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                formMensaje.requestSubmit();
+            }
+        });
+
+        $('#btnRecargarPadres').addEventListener('click', cargarPadres);
+
+        cargarPadres();
+    </script>
+</body>
+</html>

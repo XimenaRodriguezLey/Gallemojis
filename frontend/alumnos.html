@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alumnos | Gallemojis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-primary: oklch(42.563% 0.07264 164.331);
+            --accent: oklch(43.2% 0.095 166.913);
+        }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, rgba(113,183,110,0.85), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(110,208,153,0.85), transparent 25%),
+                        var(--bg-primary);
+        }
+        .panel {
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(255,255,255,0.72);
+            backdrop-filter: blur(18px);
+        }
+        .action-button {
+            background-color: var(--accent);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .action-button:hover {
+            background-color: color-mix(in srgb, var(--accent) 75%, black 25%);
+        }
+        .action-button:disabled { opacity:.6; cursor:not-allowed; }
+        .input {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+        }
+        .input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(43,128,87,0.15);
+        }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <main class="w-full max-w-4xl space-y-6">
+
+        <header class="panel rounded-3xl p-5 shadow-xl shadow-slate-900/5 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.3em] text-slate-500">Administración</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-tight">Alumnos y padres</h1>
+                <p class="text-sm text-slate-600 mt-1">
+                    Registra alumnos en tu salón. Si el padre ya existe, se reutiliza automáticamente.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="tarjetas.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Tarjetas NFC">💳</a>
+                <a href="home.html" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5" title="Volver">← Inicio</a>
+            </div>
+        </header>
+
+        <section id="boxActivacion" class="hidden panel rounded-3xl p-5 shadow-xl shadow-slate-900/5 border-l-4 border-emerald-500">
+            <p class="text-sm font-semibold text-emerald-700">Alumno registrado ✓</p>
+            <p class="text-sm text-slate-700 mt-1">
+                Entrega este enlace al padre/madre para que establezca su contraseña.
+                Caduca a los 14 días.
+            </p>
+            <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                <input id="activacionLink" class="input flex-1 font-mono text-xs" readonly />
+                <button id="btnCopiar" class="rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50">
+                    Copiar
+                </button>
+            </div>
+            <p id="copiadoMsg" class="text-xs text-emerald-600 mt-1 hidden">¡Copiado al portapapeles!</p>
+        </section>
+
+        <section class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <h2 class="text-xl font-semibold mb-1">Registrar alumno</h2>
+            <p class="text-sm text-slate-500 mb-5">
+                Llena los datos del alumno y del padre/madre. Si escribes un correo que ya está registrado
+                (hermano del alumno), reutilizamos al padre y solo damos de alta al nuevo alumno.
+            </p>
+
+            <form id="formAlumno" class="grid gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-2">Alumno</h3>
+                </div>
+
+                <label class="text-sm">
+                    <span class="block text-slate-700 mb-1">Salón</span>
+                    <select id="selSalon" class="input" required></select>
+                </label>
+
+                <label class="text-sm">
+                    <span class="block text-slate-700 mb-1">Fecha de nacimiento</span>
+                    <input id="inpFecha" type="date" class="input">
+                </label>
+
+                <label class="text-sm">
+                    <span class="block text-slate-700 mb-1">Nombre(s)</span>
+                    <input id="inpNombreAlumno" type="text" class="input" required>
+                </label>
+
+                <label class="text-sm">
+                    <span class="block text-slate-700 mb-1">Apellido(s)</span>
+                    <input id="inpApellidoAlumno" type="text" class="input" required>
+                </label>
+
+                <div class="sm:col-span-2 mt-2">
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-2">Padre / madre</h3>
+                </div>
+
+                <label class="text-sm sm:col-span-2">
+                    <span class="block text-slate-700 mb-1">Correo electrónico</span>
+                    <input id="inpCorreoPadre" type="email" class="input" required>
+                    <span id="msgPadre" class="block text-xs mt-1"></span>
+                </label>
+
+                <label class="text-sm">
+                    <span class="block text-slate-700 mb-1">Nombre(s)</span>
+                    <input id="inpNombrePadre" type="text" class="input" required>
+                </label>
+
+                <label class="text-sm">
+                    <span class="block text-slate-700 mb-1">Apellido(s)</span>
+                    <input id="inpApellidoPadre" type="text" class="input" required>
+                </label>
+
+                <label class="text-sm">
+                    <span class="block text-slate-700 mb-1">Teléfono <span class="text-slate-400">(opcional)</span></span>
+                    <input id="inpTelefono" type="tel" class="input">
+                </label>
+
+                <div class="sm:col-span-2 text-xs text-slate-500">
+                    El padre activará su cuenta con el enlace que te devolveremos al registrar.
+                </div>
+
+                <div class="sm:col-span-2 flex justify-end gap-3">
+                    <button type="reset" class="rounded-3xl border border-slate-200 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700">
+                        Limpiar
+                    </button>
+                    <button id="btnGuardar" type="submit" class="action-button rounded-3xl px-5 py-3 text-sm font-semibold shadow-lg">
+                        Registrar alumno
+                    </button>
+                </div>
+            </form>
+            <p id="msgForm" class="mt-3 text-sm"></p>
+        </section>
+
+        <section class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Inventario</p>
+                    <h2 class="mt-1 text-xl font-semibold">Alumnos del salón</h2>
+                </div>
+                <div class="flex items-center gap-3 text-sm">
+                    <label class="inline-flex items-center gap-2 text-slate-600">
+                        <input id="chkSoloActivos" type="checkbox">
+                        Solo activos
+                    </label>
+                    <button id="btnRecargar" class="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200 transition">
+                        ↻ Recargar
+                    </button>
+                </div>
+            </div>
+            <div id="listaAlumnos" class="space-y-3">
+                <p class="text-sm text-slate-500 text-center py-4">Cargando…</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/gallemojis-api.js"></script>
+    <script>
+        if (!api.requireAuth()) throw new Error('No auth');
+        if (api.rol !== 'maestro') {
+            alert('Solo los maestros pueden administrar alumnos.');
+            window.location.href = 'home.html';
+        }
+
+        const $ = (sel) => document.querySelector(sel);
+        const selSalon         = $('#selSalon');
+        const inpCorreoPadre   = $('#inpCorreoPadre');
+        const inpNombrePadre   = $('#inpNombrePadre');
+        const inpApellidoPadre = $('#inpApellidoPadre');
+        const inpTelefono      = $('#inpTelefono');
+        const msgPadre         = $('#msgPadre');
+        const msgForm          = $('#msgForm');
+        const lista            = $('#listaAlumnos');
+        const chkSoloActivos   = $('#chkSoloActivos');
+
+        let salonActual = null;
+
+        function fmtFecha(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+        }
+
+        async function cargarSalones() {
+            const salones = await api.misSalones();
+            if (!salones.length) {
+                selSalon.innerHTML = '<option>Sin salones asignados</option>';
+                return;
+            }
+            selSalon.innerHTML = salones
+                .map(s => `<option value="${s.id_salon}">${s.nombre} — ${s.grado}</option>`)
+                .join('');
+            salonActual = salones[0].id_salon;
+            selSalon.value = salonActual;
+            await cargarAlumnos();
+        }
+
+        async function cargarAlumnos() {
+            lista.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Cargando…</p>';
+            try {
+                const alumnos = await api.alumnosDelSalon(salonActual, chkSoloActivos.checked);
+                if (!alumnos.length) {
+                    lista.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">No hay alumnos registrados en este salón.</p>';
+                    return;
+                }
+                lista.innerHTML = alumnos.map(renderAlumno).join('');
+            } catch (err) {
+                lista.innerHTML = `<p class="text-sm text-red-500 text-center py-4">${err.message}</p>`;
+            }
+        }
+
+        function renderAlumno(a) {
+            const estado = a.activo
+                ? '<span class="pill bg-emerald-100 text-emerald-700">Activo</span>'
+                : '<span class="pill bg-slate-200 text-slate-600">Inactivo</span>';
+            const tarjeta = a.tiene_tarjeta
+                ? '<span class="pill bg-sky-100 text-sky-700">💳 Con tarjeta</span>'
+                : '<span class="pill bg-orange-100 text-orange-700">Sin tarjeta</span>';
+            const padreEstado = a.padre_activado
+                ? '<span class="pill bg-emerald-100 text-emerald-700">Padre activo</span>'
+                : '<span class="pill bg-yellow-100 text-yellow-700">Padre pendiente</span>';
+
+            return `
+            <article class="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                        <span class="text-2xl">👦</span>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-slate-900">${a.nombre} ${a.apellido}</p>
+                            <p class="text-xs text-slate-500">Nacimiento: ${fmtFecha(a.fecha_nacimiento)}</p>
+                            <p class="text-xs text-slate-500 truncate">
+                                Padre: ${a.nombre_padre} ${a.apellido_padre} · ${a.correo_padre}
+                                ${a.telefono_padre ? ' · ' + a.telefono_padre : ''}
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mt-2">
+                                ${estado} ${tarjeta} ${padreEstado}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2 shrink-0 text-xs">
+                        <button class="text-slate-600 hover:underline" data-action="toggle" data-id="${a.id_nino}" data-activo="${a.activo}">
+                            ${a.activo ? 'Desactivar' : 'Reactivar'}
+                        </button>
+                    </div>
+                </div>
+            </article>`;
+        }
+
+        let lookupTimer = null;
+        inpCorreoPadre.addEventListener('input', () => {
+            clearTimeout(lookupTimer);
+            msgPadre.textContent = '';
+            inpNombrePadre.disabled = false;
+            inpApellidoPadre.disabled = false;
+            inpTelefono.disabled = false;
+            lookupTimer = setTimeout(async () => {
+                const correo = inpCorreoPadre.value.trim();
+                if (!correo.includes('@')) return;
+                try {
+                    const padre = await api.buscarPadrePorCorreo(correo);
+                    inpNombrePadre.value   = padre.nombre;
+                    inpApellidoPadre.value = padre.apellido;
+                    inpTelefono.value      = padre.telefono || '';
+                    inpNombrePadre.disabled   = true;
+                    inpApellidoPadre.disabled = true;
+                    inpTelefono.disabled      = true;
+                    msgPadre.textContent = '✓ Este padre ya existe. Se reutilizará para el nuevo alumno.';
+                    msgPadre.className = 'block text-xs mt-1 text-emerald-600';
+                } catch (_) { /* 404 → no existe */ }
+            }, 400);
+        });
+
+        $('#formAlumno').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msgForm.textContent = '';
+            $('#btnGuardar').disabled = true;
+
+            const payload = {
+                alumno: {
+                    nombre:    $('#inpNombreAlumno').value.trim(),
+                    apellido:  $('#inpApellidoAlumno').value.trim(),
+                    fechaNacimiento: $('#inpFecha').value || null,
+                    idSalon:   selSalon.value,
+                },
+                padre: {
+                    correo:    inpCorreoPadre.value.trim(),
+                    nombre:    inpNombrePadre.value.trim(),
+                    apellido:  inpApellidoPadre.value.trim(),
+                    telefono:  inpTelefono.value.trim() || null,
+                },
+            };
+
+            try {
+                const r = await api.registrarAlumno(payload);
+                msgForm.textContent = r.padre_reusado
+                    ? '✓ Alumno registrado. Se reutilizó al padre existente.'
+                    : '✓ Alumno y padre registrados.';
+                msgForm.className = 'mt-3 text-sm text-emerald-600';
+
+                const box = $('#boxActivacion');
+                if (r.activacion && r.activacion.link) {
+                    $('#activacionLink').value = r.activacion.link;
+                    box.classList.remove('hidden');
+                    box.scrollIntoView({ behavior:'smooth', block:'start' });
+                } else {
+                    box.classList.add('hidden');
+                }
+
+                $('#formAlumno').reset();
+                inpNombrePadre.disabled = false;
+                inpApellidoPadre.disabled = false;
+                inpTelefono.disabled = false;
+                msgPadre.textContent = '';
+                await cargarAlumnos();
+            } catch (err) {
+                msgForm.textContent = err.message;
+                msgForm.className = 'mt-3 text-sm text-red-500';
+            } finally {
+                $('#btnGuardar').disabled = false;
+            }
+        });
+
+        selSalon.addEventListener('change', () => {
+            salonActual = selSalon.value;
+            cargarAlumnos();
+        });
+        chkSoloActivos.addEventListener('change', cargarAlumnos);
+        $('#btnRecargar').addEventListener('click', cargarAlumnos);
+
+        lista.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            if (btn.dataset.action === 'toggle') {
+                const activoActual = btn.dataset.activo === 'true';
+                try {
+                    if (activoActual) {
+                        if (!confirm('¿Desactivar este alumno? Su historial se conservará.')) return;
+                        await api.desactivarAlumno(id);
+                    } else {
+                        await api.actualizarNino(id, { activo: true });
+                    }
+                    await cargarAlumnos();
+                } catch (err) {
+                    alert(err.message);
+                }
+            }
+        });
+
+        $('#btnCopiar').addEventListener('click', async () => {
+            const txt = $('#activacionLink').value;
+            try {
+                await navigator.clipboard.writeText(txt);
+                const ok = $('#copiadoMsg');
+                ok.classList.remove('hidden');
+                setTimeout(() => ok.classList.add('hidden'), 1800);
+            } catch (_) {
+                $('#activacionLink').select();
+            }
+        });
+
+        cargarSalones().catch(err => {
+            lista.innerHTML = `<p class="text-sm text-red-500 text-center py-4">${err.message}</p>`;
+        });
+    </script>
+</body>
+</html>
