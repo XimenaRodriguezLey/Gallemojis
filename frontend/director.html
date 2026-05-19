@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel del director | Gallemojis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-primary: oklch(42.563% 0.07264 164.331);
+            --accent: oklch(43.2% 0.095 166.913);
+        }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, rgba(113,183,110,0.85), transparent 25%),
+                        radial-gradient(circle at bottom left, rgba(110,208,153,0.85), transparent 25%),
+                        var(--bg-primary);
+        }
+        .panel {
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(255,255,255,0.72);
+            backdrop-filter: blur(18px);
+        }
+        .action-button {
+            background-color: var(--accent);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .action-button:hover {
+            background-color: color-mix(in srgb, var(--accent) 75%, black 25%);
+        }
+        .action-button:disabled { opacity:.6; cursor:not-allowed; }
+        .input, select.input, textarea.input {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+        .input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(43,128,87,0.15);
+        }
+        .pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 999px;
+            font-size: 0.7rem; font-weight: 600;
+        }
+        .tab-btn {
+            padding: 10px 16px;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #475569;
+            background: white;
+            border: 1px solid #e2e8f0;
+            transition: all 0.15s;
+        }
+        .tab-btn:hover { background: #f1f5f9; }
+        .tab-btn.activo {
+            background: var(--accent);
+            color: white;
+            border-color: transparent;
+        }
+        .tab-section { display: none; }
+        .tab-section.activo { display: block; }
+    </style>
+</head>
+<body class="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <main class="w-full max-w-5xl space-y-6">
+
+        <header class="panel rounded-3xl p-5 shadow-xl shadow-slate-900/5 flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.3em] text-slate-500">Panel administrativo</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-tight">Dirección</h1>
+                <p class="text-sm text-slate-600 mt-1" id="saludo">—</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="cerrarSesion()" class="rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-sm transition hover:-translate-y-0.5 text-red-400" title="Cerrar sesión">
+                    ↩
+                </button>
+            </div>
+        </header>
+
+        <!-- Aviso post-reset / activación -->
+        <section id="boxLink" class="hidden panel rounded-3xl p-5 shadow-xl shadow-slate-900/5 border-l-4 border-emerald-500">
+            <p id="boxTitulo" class="text-sm font-semibold text-emerald-700">Listo ✓</p>
+            <p class="text-sm text-slate-700 mt-1">
+                Entrega este enlace a la persona para que establezca su contraseña. Caduca a los 14 días.
+            </p>
+            <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                <input id="linkOutput" class="input flex-1 font-mono text-xs" readonly />
+                <button id="btnCopiar" class="rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50">
+                    Copiar
+                </button>
+            </div>
+            <p id="copiadoMsg" class="text-xs text-emerald-600 mt-1 hidden">¡Copiado al portapapeles!</p>
+        </section>
+
+        <!-- Tabs -->
+        <nav class="panel rounded-3xl p-3 shadow-xl shadow-slate-900/5 flex flex-wrap gap-2 justify-center">
+            <button class="tab-btn activo" data-tab="maestros">👩‍🏫 Maestros</button>
+            <button class="tab-btn" data-tab="salones">🏫 Salones</button>
+            <button class="tab-btn" data-tab="alumnos">👦 Alumnos</button>
+            <button class="tab-btn" data-tab="padres">👨‍👩‍👧 Padres</button>
+        </nav>
+
+        <!-- ===========================  Maestros  =========================== -->
+        <section class="tab-section activo" id="tab-maestros">
+            <div class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+                <h2 class="text-xl font-semibold mb-4">Registrar maestro</h2>
+                <form id="formMaestro" class="grid gap-3 sm:grid-cols-2">
+                    <label class="text-sm"><span class="block text-slate-700 mb-1">Nombre(s)</span><input id="mNombre" class="input" required></label>
+                    <label class="text-sm"><span class="block text-slate-700 mb-1">Apellido(s)</span><input id="mApellido" class="input" required></label>
+                    <label class="text-sm sm:col-span-2"><span class="block text-slate-700 mb-1">Correo</span><input id="mCorreo" type="email" class="input" required></label>
+                    <div class="sm:col-span-2 text-xs text-slate-500">El maestro recibirá un enlace de activación que se mostrará al guardarlo.</div>
+                    <div class="sm:col-span-2 flex justify-end gap-2">
+                        <button type="reset" class="rounded-3xl border border-slate-200 bg-white/90 px-5 py-2 text-sm font-semibold text-slate-700">Limpiar</button>
+                        <button type="submit" class="action-button rounded-3xl px-5 py-2 text-sm font-semibold shadow-lg">Registrar maestro</button>
+                    </div>
+                </form>
+                <p id="msgMaestro" class="mt-2 text-sm"></p>
+            </div>
+
+            <div class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5 mt-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-semibold">Maestros registrados</h2>
+                    <button onclick="cargarMaestros()" class="text-xs text-slate-500 hover:text-slate-800">↻ Recargar</button>
+                </div>
+                <div id="listaMaestros" class="space-y-3"><p class="text-sm text-slate-500">Cargando…</p></div>
+            </div>
+        </section>
+
+        <!-- ===========================  Salones  =========================== -->
+        <section class="tab-section" id="tab-salones">
+            <div class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+                <h2 class="text-xl font-semibold mb-4">Registrar salón</h2>
+                <form id="formSalon" class="grid gap-3 sm:grid-cols-2">
+                    <label class="text-sm"><span class="block text-slate-700 mb-1">Nombre</span><input id="sNombre" class="input" required placeholder="Salón Girasol"></label>
+                    <label class="text-sm"><span class="block text-slate-700 mb-1">Grado</span><input id="sGrado" class="input" required placeholder="2° A"></label>
+                    <label class="text-sm sm:col-span-2"><span class="block text-slate-700 mb-1">Maestro asignado</span><select id="sMaestro" class="input" required></select></label>
+                    <div class="sm:col-span-2 flex justify-end gap-2">
+                        <button type="reset" class="rounded-3xl border border-slate-200 bg-white/90 px-5 py-2 text-sm font-semibold text-slate-700">Limpiar</button>
+                        <button type="submit" class="action-button rounded-3xl px-5 py-2 text-sm font-semibold shadow-lg">Registrar salón</button>
+                    </div>
+                </form>
+                <p id="msgSalon" class="mt-2 text-sm"></p>
+            </div>
+
+            <div class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5 mt-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-semibold">Salones</h2>
+                    <button onclick="cargarSalones()" class="text-xs text-slate-500 hover:text-slate-800">↻ Recargar</button>
+                </div>
+                <div id="listaSalones" class="space-y-3"><p class="text-sm text-slate-500">Cargando…</p></div>
+            </div>
+        </section>
+
+        <!-- ===========================  Alumnos  =========================== -->
+        <section class="tab-section" id="tab-alumnos">
+            <div class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-semibold">Alumnos (todos los salones)</h2>
+                    <div class="flex items-center gap-3 text-sm">
+                        <label class="inline-flex items-center gap-2 text-slate-600">
+                            <input id="aSoloActivos" type="checkbox"> Solo activos
+                        </label>
+                        <button onclick="cargarAlumnos()" class="text-xs text-slate-500 hover:text-slate-800">↻ Recargar</button>
+                    </div>
+                </div>
+                <div id="listaAlumnos" class="space-y-3"><p class="text-sm text-slate-500">Cargando…</p></div>
+                <p class="text-xs text-slate-500 mt-3">
+                    Para dar de alta a un alumno se usa el flujo de la maestra (página Alumnos). Aquí solo administras.
+                </p>
+            </div>
+        </section>
+
+        <!-- ===========================  Padres  =========================== -->
+        <section class="tab-section" id="tab-padres">
+            <div class="panel rounded-3xl p-6 shadow-xl shadow-slate-900/5">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-semibold">Padres registrados</h2>
+                    <button onclick="cargarPadres()" class="text-xs text-slate-500 hover:text-slate-800">↻ Recargar</button>
+                </div>
+                <div id="listaPadres" class="space-y-3"><p class="text-sm text-slate-500">Cargando…</p></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/gallemojis-api.js"></script>
+    <script>
+        if (!api.requireAuth()) throw new Error('No auth');
+        if (api.rol !== 'director') {
+            alert('Solo los directores pueden ver este panel.');
+            window.location.href = 'home.html';
+        }
+        document.getElementById('saludo').textContent =
+            `Bienvenido(a), ${api.nombre?.split(' ')[0] || 'director(a)'}.`;
+
+        const $ = (s) => document.querySelector(s);
+
+        function escaparHTML(t) {
+            const d = document.createElement('div');
+            d.textContent = t == null ? '' : String(t);
+            return d.innerHTML;
+        }
+        function fmtFecha(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+        }
+
+        // ─── Tabs ───────────────────────────────────────────
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('activo', b === btn));
+                document.querySelectorAll('.tab-section').forEach(s =>
+                    s.classList.toggle('activo', s.id === `tab-${tab}`)
+                );
+                if (tab === 'maestros') cargarMaestros();
+                if (tab === 'salones')  { cargarSalones(); cargarMaestrosParaSelect(); }
+                if (tab === 'alumnos')  cargarAlumnos();
+                if (tab === 'padres')   cargarPadres();
+            });
+        });
+
+        // ─── Caja de link de activación ─────────────────────
+        function mostrarLink(titulo, link) {
+            $('#boxTitulo').textContent = titulo;
+            $('#linkOutput').value = link;
+            $('#boxLink').classList.remove('hidden');
+            $('#boxLink').scrollIntoView({ behavior:'smooth', block:'start' });
+        }
+        $('#btnCopiar').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText($('#linkOutput').value);
+                $('#copiadoMsg').classList.remove('hidden');
+                setTimeout(() => $('#copiadoMsg').classList.add('hidden'), 1800);
+            } catch (_) { $('#linkOutput').select(); }
+        });
+
+        // ===================  MAESTROS  ===================
+        $('#formMaestro').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            $('#msgMaestro').textContent = '';
+            try {
+                const m = await api.registrarMaestro({
+                    nombre:   $('#mNombre').value.trim(),
+                    apellido: $('#mApellido').value.trim(),
+                    correo:   $('#mCorreo').value.trim(),
+                });
+                $('#msgMaestro').textContent = '✓ Maestro registrado.';
+                $('#msgMaestro').className   = 'mt-2 text-sm text-emerald-600';
+                $('#formMaestro').reset();
+                if (m.activacion_link) mostrarLink('Maestro registrado ✓', m.activacion_link);
+                await cargarMaestros();
+            } catch (err) {
+                $('#msgMaestro').textContent = err.message;
+                $('#msgMaestro').className   = 'mt-2 text-sm text-red-500';
+            }
+        });
+
+        async function cargarMaestros() {
+            try {
+                const list = await api.listarMaestros();
+                $('#listaMaestros').innerHTML = list.length ? list.map(renderMaestro).join('')
+                    : '<p class="text-sm text-slate-500 text-center py-4">No hay maestros aún.</p>';
+            } catch (err) {
+                $('#listaMaestros').innerHTML = `<p class="text-sm text-red-500">${err.message}</p>`;
+            }
+        }
+        function renderMaestro(m) {
+            const estado = m.activo
+                ? '<span class="pill bg-emerald-100 text-emerald-700">Activo</span>'
+                : '<span class="pill bg-slate-200 text-slate-600">Inactivo</span>';
+            const pass = m.tiene_password
+                ? '<span class="pill bg-emerald-100 text-emerald-700">Cuenta activada</span>'
+                : '<span class="pill bg-yellow-100 text-yellow-700">Pendiente</span>';
+            return `
+            <article class="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-semibold text-slate-900">${escaparHTML(m.nombre)} ${escaparHTML(m.apellido)}</p>
+                        <p class="text-xs text-slate-500 truncate">${escaparHTML(m.correo)} · ${m.salones} salón(es)</p>
+                        <div class="flex flex-wrap gap-1.5 mt-2">${estado} ${pass}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 text-xs">
+                        <button onclick="resetMaestro('${m.id_maestro}')" class="text-amber-600 hover:underline">Reiniciar contraseña</button>
+                        ${m.activo
+                            ? `<button onclick="toggleMaestro('${m.id_maestro}', false)" class="text-slate-600 hover:underline">Desactivar</button>`
+                            : `<button onclick="toggleMaestro('${m.id_maestro}', true)" class="text-slate-600 hover:underline">Reactivar</button>`}
+                    </div>
+                </div>
+            </article>`;
+        }
+        async function toggleMaestro(id, activar) {
+            try {
+                if (!activar && !confirm('¿Desactivar este maestro? Sus salones seguirán existiendo.')) return;
+                if (activar) await api.actualizarMaestro(id, { activo: true });
+                else         await api.desactivarMaestro(id);
+                await cargarMaestros();
+            } catch (err) { alert(err.message); }
+        }
+        async function resetMaestro(id) {
+            if (!confirm('Esto invalidará la contraseña actual del maestro y generará un nuevo enlace.')) return;
+            try {
+                const r = await api.recuperarPassword('maestro', id);
+                mostrarLink('Contraseña del maestro reiniciada ✓', r.link);
+            } catch (err) { alert(err.message); }
+        }
+
+        // ===================  SALONES  ===================
+        async function cargarMaestrosParaSelect() {
+            try {
+                const list = await api.listarMaestros(true);
+                $('#sMaestro').innerHTML = list.length
+                    ? list.map(m => `<option value="${m.id_maestro}">${escaparHTML(m.nombre)} ${escaparHTML(m.apellido)}</option>`).join('')
+                    : '<option value="">No hay maestros activos</option>';
+            } catch (_) {/* silencioso */}
+        }
+        $('#formSalon').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            $('#msgSalon').textContent = '';
+            try {
+                await api.registrarSalon({
+                    nombre:    $('#sNombre').value.trim(),
+                    grado:     $('#sGrado').value.trim(),
+                    idMaestro: $('#sMaestro').value,
+                });
+                $('#msgSalon').textContent = '✓ Salón creado.';
+                $('#msgSalon').className   = 'mt-2 text-sm text-emerald-600';
+                $('#formSalon').reset();
+                await cargarSalones();
+            } catch (err) {
+                $('#msgSalon').textContent = err.message;
+                $('#msgSalon').className   = 'mt-2 text-sm text-red-500';
+            }
+        });
+        async function cargarSalones() {
+            try {
+                const list = await api.listarSalones();
+                $('#listaSalones').innerHTML = list.length ? list.map(renderSalon).join('')
+                    : '<p class="text-sm text-slate-500 text-center py-4">No hay salones.</p>';
+            } catch (err) {
+                $('#listaSalones').innerHTML = `<p class="text-sm text-red-500">${err.message}</p>`;
+            }
+        }
+        function renderSalon(s) {
+            const estado = s.activo
+                ? '<span class="pill bg-emerald-100 text-emerald-700">Activo</span>'
+                : '<span class="pill bg-slate-200 text-slate-600">Inactivo</span>';
+            return `
+            <article class="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-semibold text-slate-900">${escaparHTML(s.nombre)} <span class="text-slate-500 font-normal">· ${escaparHTML(s.grado)}</span></p>
+                        <p class="text-xs text-slate-500 truncate">
+                            Maestro: ${escaparHTML(s.nombre_maestro)} ${escaparHTML(s.apellido_maestro)} · ${s.ninos} alumno(s)
+                        </p>
+                        <div class="flex flex-wrap gap-1.5 mt-2">${estado}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 text-xs">
+                        ${s.activo
+                            ? `<button onclick="toggleSalon('${s.id_salon}', false)" class="text-slate-600 hover:underline">Desactivar</button>`
+                            : `<button onclick="toggleSalon('${s.id_salon}', true)" class="text-slate-600 hover:underline">Reactivar</button>`}
+                    </div>
+                </div>
+            </article>`;
+        }
+        async function toggleSalon(id, activar) {
+            try {
+                if (!activar && !confirm('¿Desactivar este salón?')) return;
+                if (activar) await api.actualizarSalon(id, { activo: true });
+                else         await api.desactivarSalon(id);
+                await cargarSalones();
+            } catch (err) { alert(err.message); }
+        }
+
+        // ===================  ALUMNOS  ===================
+        $('#aSoloActivos').addEventListener('change', cargarAlumnos);
+        async function cargarAlumnos() {
+            try {
+                const list = await api.listarTodosAlumnos($('#aSoloActivos').checked);
+                $('#listaAlumnos').innerHTML = list.length ? list.map(renderAlumno).join('')
+                    : '<p class="text-sm text-slate-500 text-center py-4">No hay alumnos.</p>';
+            } catch (err) {
+                $('#listaAlumnos').innerHTML = `<p class="text-sm text-red-500">${err.message}</p>`;
+            }
+        }
+        function renderAlumno(a) {
+            const estado = a.activo
+                ? '<span class="pill bg-emerald-100 text-emerald-700">Activo</span>'
+                : '<span class="pill bg-slate-200 text-slate-600">Inactivo</span>';
+            const tarjeta = a.tiene_tarjeta
+                ? '<span class="pill bg-sky-100 text-sky-700">Con tarjeta</span>'
+                : '<span class="pill bg-orange-100 text-orange-700">Sin tarjeta</span>';
+            return `
+            <article class="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-semibold text-slate-900">${escaparHTML(a.nombre)} ${escaparHTML(a.apellido)}</p>
+                        <p class="text-xs text-slate-500 truncate">
+                            ${escaparHTML(a.nombre_salon)} · ${escaparHTML(a.grado_salon)} · Padre: ${escaparHTML(a.nombre_padre)} ${escaparHTML(a.apellido_padre)}
+                        </p>
+                        <div class="flex flex-wrap gap-1.5 mt-2">${estado} ${tarjeta}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 text-xs">
+                        ${a.activo
+                            ? `<button onclick="toggleAlumno('${a.id_nino}', false)" class="text-slate-600 hover:underline">Desactivar</button>`
+                            : `<button onclick="toggleAlumno('${a.id_nino}', true)" class="text-slate-600 hover:underline">Reactivar</button>`}
+                    </div>
+                </div>
+            </article>`;
+        }
+        async function toggleAlumno(id, activar) {
+            try {
+                if (!activar && !confirm('¿Desactivar este alumno? Su historial se conserva.')) return;
+                if (activar) await api.actualizarNino(id, { activo: true });
+                else         await api.desactivarNino(id);
+                await cargarAlumnos();
+            } catch (err) { alert(err.message); }
+        }
+
+        // ===================  PADRES  ===================
+        async function cargarPadres() {
+            try {
+                const list = await api.listarTodosPadres();
+                $('#listaPadres').innerHTML = list.length ? list.map(renderPadre).join('')
+                    : '<p class="text-sm text-slate-500 text-center py-4">No hay padres registrados.</p>';
+            } catch (err) {
+                $('#listaPadres').innerHTML = `<p class="text-sm text-red-500">${err.message}</p>`;
+            }
+        }
+        function renderPadre(p) {
+            const estado = p.activo
+                ? '<span class="pill bg-emerald-100 text-emerald-700">Activo</span>'
+                : '<span class="pill bg-slate-200 text-slate-600">Inactivo</span>';
+            const pass = p.tiene_password
+                ? '<span class="pill bg-emerald-100 text-emerald-700">Cuenta activada</span>'
+                : '<span class="pill bg-yellow-100 text-yellow-700">Pendiente</span>';
+            return `
+            <article class="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-semibold text-slate-900">${escaparHTML(p.nombre)} ${escaparHTML(p.apellido)}</p>
+                        <p class="text-xs text-slate-500 truncate">
+                            ${escaparHTML(p.correo)}${p.telefono ? ' · ' + escaparHTML(p.telefono) : ''} · ${p.hijos} hijo(s)
+                        </p>
+                        <div class="flex flex-wrap gap-1.5 mt-2">${estado} ${pass}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 text-xs">
+                        <button onclick="resetPadre('${p.id_padre}')" class="text-amber-600 hover:underline">Reiniciar contraseña</button>
+                    </div>
+                </div>
+            </article>`;
+        }
+        async function resetPadre(id) {
+            if (!confirm('Esto invalidará la contraseña actual del padre y generará un nuevo enlace.')) return;
+            try {
+                const r = await api.recuperarPassword('padre', id);
+                mostrarLink('Contraseña del padre reiniciada ✓', r.link);
+            } catch (err) { alert(err.message); }
+        }
+
+        function cerrarSesion() {
+            api.logout();
+            window.location.href = 'index.html';
+        }
+
+        // Initial load (Maestros)
+        cargarMaestros();
+    </script>
+</body>
+</html>

@@ -176,6 +176,12 @@
     <script>
         if (!api.requireAuth()) throw new Error('No auth');
 
+        // El director tiene su propio panel; lo mandamos directo allí.
+        if (api.rol === 'director') {
+            window.location.href = 'director.html';
+            throw new Error('redirect');
+        }
+
         const EMOJIS = {
             alegria:  { emoji: '😄', color: '#F59E0B' },
             tristeza: { emoji: '😢', color: '#6495ED' },
