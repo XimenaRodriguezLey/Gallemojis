@@ -35,15 +35,15 @@
 const char* EMOCION = "alegria";
 
 // WiFi
-const char* WIFI_SSID = "INFINITUME99D_2.4";
-const char* WIFI_PASS = "mN66Bp3NNm";
+const char* WIFI_SSID = "iPhone de Raul Roberto";
+const char* WIFI_PASS = "01234567";
 
 // Backend Gallemojis
 // ⚠️  Usa la IP local del SERVIDOR (la PC donde corre `npm start`),
 //     NO "localhost" y NO la IP del ESP32.
 //     Sácala en Windows con: ipconfig   →   IPv4 del adaptador WiFi.
 //     Ejemplo: "http://192.168.1.100:3001"
-const char* SERVER_HOST = "192.168.1.224";
+const char* SERVER_HOST = "172.20.10.2";
 const uint16_t SERVER_PORT = 3001;
 
 // Rutas
